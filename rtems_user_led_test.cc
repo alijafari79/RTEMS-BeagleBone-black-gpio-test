@@ -5,48 +5,78 @@
 #include <assert.h>
 
 #include <rtems.h>
-#include <bsp/bbb-pwm.h>
+#include <libcpu/am335x.h>
+#include <bsp/beagleboneblack.h>
+#include <bsp/bbb-gpio.h>
+#include <bsp/gpio.h>
 
+const char rtems_test_name[] = "LIBGPIO_TEST";
 
-static void
-Init(rtems_task_argument arg)
+static void Init(rtems_task_argument arg)
 {
-    printf("Starting PWM Testing\n");
 
     rtems_status_code sc;
-    bool success;
 
-    /*Initialize GPIO pins in BBB*/
+    printf("Starting Gpio Testing\n");
+
+    /* Initializes the GPIO API */
     rtems_gpio_initialize();
 
-    // Configure both channels of PWM instance 0 to run at 10 Hz, 50% duty cycle
-    BBB_PWMSS pwmss_id = BBB_PWMSS0;
-    float pwm_freq = 1;
-    float duty_a = 0.5;
-    float duty_b = 0.5;
+    sc = rtems_gpio_request_pin(BBB_LED_USR0, DIGITAL_OUTPUT, false, false, NULL);
+    assert(sc == RTEMS_SUCCESSFUL);
 
-    /* Set P9 Header , 21 Pin number , PWM B channel and 0 PWM instance to generate frequency*/
-    beagle_pwm_pinmux_setup(BBB_P9_21_0B, BBB_PWMSS0);
+    sc = rtems_gpio_request_pin(BBB_LED_USR1, BBB_DIGITAL_OUT, false, false, NULL);
+    assert(sc == RTEMS_SUCCESSFUL);
 
-    // Initialise the pwm module
-    success = beagle_pwm_init(BBB_PWMSS0);
-    assert(success == true);
+    sc = rtems_gpio_request_pin(BBB_LED_USR2, BBB_DIGITAL_OUT, false, false, NULL);
+    assert(sc == RTEMS_SUCCESSFUL);
 
-    /* check clock is running */
-    bool is_running = beagle_pwmss_is_running(pwmss_id);
-    printf("clock is running %s\n", is_running ? "true" : "false");
+    sc = rtems_gpio_request_pin(BBB_LED_USR3, BBB_DIGITAL_OUT, false, false, NULL);
+    assert(sc == RTEMS_SUCCESSFUL);
 
-    // Configure the PWM module for a 10Hz output at 50% duty cycle
-    beagle_pwm_configure(pwmss_id, pwm_freq, duty_a, duty_b);
+    // Now with a general GPIO pin instead of one of the user leds
+    sc = rtems_gpio_request_pin(BBB_P9_12, BBB_DIGITAL_OUT, false, false, NULL);
+    assert(sc == RTEMS_SUCCESSFUL);
 
-    printf("PWM  enable for 10s ....\n");
-    // Enable the pwm output
-    beagle_pwm_enable(pwmss_id);
-    sleep(10);
+    /* Pattern Generation using User Leds */
 
-    /*freeze the counter and disable pwm module*/
-    beagle_pwm_disable(pwmss_id);
-    printf("PWM disabled. Test finished.\n");
+    /* USER LED 0 */
+    rtems_gpio_set (BBB_LED_USR0);
+    sleep(1);
+    rtems_gpio_clear(BBB_LED_USR0);
+    sleep(1);
+    rtems_gpio_release_pin(BBB_LED_USR0);
+
+    /* USER LED 1 */
+    rtems_gpio_set (BBB_LED_USR1);
+    sleep(1);
+    rtems_gpio_clear(BBB_LED_USR1);
+    sleep(1);
+    rtems_gpio_release_pin(BBB_LED_USR1);
+
+    /* USER LED 2 */
+    rtems_gpio_set (BBB_LED_USR2);
+    sleep(1);
+    rtems_gpio_clear(BBB_LED_USR2);
+    sleep(1);
+    rtems_gpio_release_pin(BBB_LED_USR2);
+
+    /* USER LED 3 */
+    rtems_gpio_set (BBB_LED_USR3);
+    sleep(1);
+    rtems_gpio_clear(BBB_LED_USR3);
+    sleep(1);
+    rtems_gpio_release_pin(BBB_LED_USR3);
+
+    /* flash the led on pin P9_12 20 times */
+    uint32_t i = 0;
+    while(++i < 20) {
+        rtems_gpio_set (BBB_P9_12);
+        usleep(500000);
+        rtems_gpio_clear(BBB_P9_12);
+        usleep(500000);
+    }
+    rtems_gpio_release_pin(BBB_P9_12);
 }
 
 #define CONFIGURE_MICROSECONDS_PER_TICK 1000
